@@ -7,7 +7,6 @@ output:
         toc: TRUE
         toc_depth: 3
         toc_float: TRUE
-        keep_md: yes
         df_print: paged
         code_folding: show
 ---
