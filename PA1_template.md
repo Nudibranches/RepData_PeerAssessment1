@@ -1,0 +1,330 @@
+---
+title: "Course Project 1"
+author: "Miguel Barranco"
+date: "28/11/2020"
+output: 
+    html_document: 
+      code_folding: show
+      keep_md: yes
+      toc: yes
+      toc_float: yes
+---
+
+
+
+## Assignment
+
+The information used for this activity was obtained from the course [website](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip), as well as instructions. For more information, you can visit [course's GitHub Repository](https://github.com/rdpeng/RepData_PeerAssessment1). 
+
+### Loading and preprocessing the data
+
+Show any code that is needed to:
+
+1. Load the data (i.e. `read.csv()`)
+
+
+```r
+Data <-read.csv("F:/Miguel/PersonalCoding/RProjects/Coursera/Reproducible Research/RepData_PeerAssessment1/activity.csv")
+head(Data)
+```
+
+```
+##   steps       date interval
+## 1    NA 2012-10-01        0
+## 2    NA 2012-10-01        5
+## 3    NA 2012-10-01       10
+## 4    NA 2012-10-01       15
+## 5    NA 2012-10-01       20
+## 6    NA 2012-10-01       25
+```
+
+2. Process/transform the data (if necessary) into a format suitable for your analysis
+
+- Adjusting date type to date for easy separation and later subplotting down the line
+
+
+```r
+library(lubridate)
+```
+
+```
+## 
+## Attaching package: 'lubridate'
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     date, intersect, setdiff, union
+```
+
+```r
+#Data type set from character to date
+Data$date<-ymd(Data$date)
+#Identifying weekdays for last question
+Weekday <- weekdays(Data$date)
+#Adding new col
+Data <- cbind(Data,Weekday)
+summary(Data)
+```
+
+```
+##      steps             date               interval        Weekday         
+##  Min.   :  0.00   Min.   :2012-10-01   Min.   :   0.0   Length:17568      
+##  1st Qu.:  0.00   1st Qu.:2012-10-16   1st Qu.: 588.8   Class :character  
+##  Median :  0.00   Median :2012-10-31   Median :1177.5   Mode  :character  
+##  Mean   : 37.38   Mean   :2012-10-31   Mean   :1177.5                     
+##  3rd Qu.: 12.00   3rd Qu.:2012-11-15   3rd Qu.:1766.2                     
+##  Max.   :806.00   Max.   :2012-11-30   Max.   :2355.0                     
+##  NA's   :2304
+```
+
+### What is mean total number of steps taken per day?
+
+For this part of the assignment, you can ignore the missing values in
+the dataset.
+
+1. Make a histogram of the total number of steps taken each day
+
+
+```r
+library(ggplot2)
+#Calculating steps means based on dates
+ResTable<-aggregate(steps~date,Data,sum,na.rm=TRUE)
+#Plot generation for means visualization
+ggplot( ResTable, aes(factor(date), steps)) +
+    geom_col() + 
+    xlab("Information date") +
+    ylab("Steps") +
+    ggtitle("Total steps recorded per day") +
+    theme(axis.text.x = element_text(angle = 90), legend.position="none")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+```r
+#Simple histogram
+hist(ResTable$steps)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-3-2.png)<!-- -->
+
+2. Calculate and report the **mean** and **median** total number of steps taken per day
+
+- Median of total steps per day during experiment:
+
+
+```r
+Med<-median(ResTable$steps)
+Med
+```
+
+```
+## [1] 10765
+```
+
+- Mean of total steps per day during experiment:
+
+
+```r
+Mea<-mean(ResTable$steps)
+Mea
+```
+
+```
+## [1] 10766.19
+```
+
+### What is the average daily activity pattern?
+
+1. Make a time series plot (i.e. `type = "l"`) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+
+```r
+#Calculating steps means based on intervals
+TempTable <- aggregate(steps~interval,Data,mean,na.rm=TRUE)
+#Plot generation for means visualization
+ggplot(TempTable, aes(interval, steps)) +
+    geom_line() + 
+    xlab("Interval (5-min intervals)") +
+    ylab("Number of steps") +
+    ggtitle("Tendency of total steps mean during a day") +
+    theme(legend.position="none")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+
+```r
+#Identifying maximum value
+MaxV<-max(TempTable$steps)
+#Identifying interval of maximum value
+TempTable[TempTable$steps==MaxV,1]
+```
+
+```
+## [1] 835
+```
+
+### Imputing missing values
+
+Note that there are a number of days/intervals where there are missing
+values (coded as `NA`). The presence of missing days may introduce
+bias into some calculations or summaries of the data.
+
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with `NA`s)
+
+
+```r
+NaCont<-nrow(Data[is.na(Data$steps),])
+#Result should correspond to same number on summary from 1st question (2304)
+NaCont
+```
+
+```
+## [1] 2304
+```
+
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+- Replacing information based on the mean for interval seems to be rounded enough to avoid influencing the results trend
+
+
+```r
+#Subsetting NAs data
+NaTable<-Data[is.na(Data$steps),]
+#Replacing NAs for mean values, based on interval matching
+NaTable$steps<-TempTable$steps[match(TempTable$interval,NaTable$interval)]
+```
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+
+```r
+#Creating new identical dataset
+NewData<-Data
+#j variable for controlled pacing on if cycle
+j<-1
+for (i in 1:nrow(NewData)){
+    if (is.na(NewData[i,1])){
+        NewData[i,1]<-NaTable[j,1]
+        j<-j+1
+    }
+}
+#Sanity check to review for NAs on new dataset
+NaCont<-nrow(NewData[is.na(NewData$steps),])
+NaCont
+```
+
+```
+## [1] 0
+```
+
+4. Make a histogram of the total number of steps taken each day and Calculate and report the **mean** and **median** total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+- Some changes are expected due to the addition of data for 8 previously ignored dates, at least a slight change strengthening a tendency of values approaching the mean. 
+
+
+```r
+#Calculating steps means based on dates
+NewResTable<-aggregate(steps~date,NewData,sum,na.rm=TRUE)
+#Plot generation for means visualization
+ggplot( NewResTable, aes(factor(date), steps)) +
+    geom_col() + 
+    xlab("Information date") +
+    ylab("Steps") +
+    ggtitle("Total steps recorded per day") +
+    theme(axis.text.x = element_text(angle = 90), legend.position="none")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+```r
+#Simple histogram
+par(mfrow=c(1,2))
+hist(NewResTable$steps, xlab = "Total steps per day", main = "Total number of steps (NAs replaced)", ylim = c(0,35))
+hist(ResTable$steps, xlab = "Total steps per day", main = "Total number of steps (NAs removed)", ylim = c(0,35))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
+
+```r
+#New Median
+NMed<-median(NewResTable$steps)
+NMed
+```
+
+```
+## [1] 10766.19
+```
+
+```r
+#Median comparison
+CompMed<-NMed==Med
+CompMed
+```
+
+```
+## [1] FALSE
+```
+
+```r
+#New Mean
+NMea<-mean(NewResTable$steps)
+NMea
+```
+
+```
+## [1] 10766.19
+```
+
+```r
+#Mean comparison
+CompMea<-NMea==Mea
+CompMea
+```
+
+```
+## [1] TRUE
+```
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+For this part the `weekdays()` function may be of some help here. Use
+the dataset with the filled-in missing values for this part.
+
+1. Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+
+```r
+#Creating new column
+NewData$WeekdayType<-c(NA)
+#Assigning levels
+for (i in 1:nrow(NewData)){
+    if (NewData[i,4]=="sábado"|NewData[i,4]=="domingo"){
+        NewData[i,5]<-"Weekend"
+    } else {
+        NewData[i,5]<-"Weekday"
+    }
+}
+```
+
+1. Make a panel plot containing a time series plot (i.e. `type = "l"`) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+
+```r
+#Calculating steps means based on intervals
+TempTable <- aggregate(steps~interval + WeekdayType,NewData,mean)
+#Plot generation for means visualization
+ggplot(TempTable, aes(interval, steps, color=WeekdayType)) +
+    geom_line() + 
+    xlab("Interval") +
+    ylab("Number of steps") +
+    ggtitle("Tendency of total steps mean during a day") +
+    facet_wrap(~WeekdayType, ncol = 1, nrow=2) +
+    theme(legend.position="none")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
