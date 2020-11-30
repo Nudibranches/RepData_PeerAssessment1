@@ -7,6 +7,7 @@ output:
         toc: TRUE
         toc_depth: 3
         toc_float: TRUE
+        keep_md: yes
         df_print: paged
         code_folding: show
 ---
@@ -26,7 +27,7 @@ Show any code that is needed to:
 1. Load the data (i.e. `read.csv()`)
 
 ```{r rows.print=5}
-Data <-read.csv("~/R/RProjects/Coursera/Reproducible Research/RepData_PeerAssessment1/activity.csv")
+Data <-read.csv("F:/Miguel/PersonalCoding/RProjects/Coursera/Reproducible Research/RepData_PeerAssessment1/activity.csv")
 Data
 ```
 
